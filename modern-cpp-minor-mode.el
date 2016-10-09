@@ -304,6 +304,29 @@ http://en.cppreference.com/w/cpp/language/string_literal"
       (or (looking-back "enum\\s-+class\\s-+")
           (looking-back "enum\\s-+class\\s-+\\S-+\\s-*:\\s-*")))))
 
+(defun modern-c++-argument-lambda-p (pos)
+  "Checks if POS is at the beginning of a lambda as argument."
+  (ignore-errors
+    (save-excursion
+      (goto-char pos)
+      (looking-at ".*[(,][ \t]*\\[[^]]*\\][ \t]*[({][^}]*$"))))
+
+(defun modern-c++-argument-block-p (pos)
+  "Checks if POS is at the beginning of a block as argument."
+  (ignore-errors
+    (save-excursion
+      (goto-char pos)
+      (or (looking-at ".*[(,][^)]*[({][^}]*$")
+          nil))))
+
+(defun modern-c++-argument-block-closed-p (pos)
+  "Checks if POS is at a block as argument."
+  (ignore-errors
+    (save-excursion
+      (goto-char pos)
+      (or (looking-at ".*[({].*[})]\\s-*,$")
+          nil))))
+
 (defun modern-c++-class-enum-closing-brace-p (pos)
   "Checks if POS is within the braces of a C++ \"enum class\"."
   (ignore-errors
@@ -314,18 +337,47 @@ http://en.cppreference.com/w/cpp/language/string_literal"
 
 (defun modern-c++-offset-topmost-intro-cont (langelem)
   (let ((pos (c-langelem-pos langelem)))
-    (if (modern-c++-inside-class-enum-p pos)
-        (if (modern-c++-class-enum-closing-brace-p pos)
-            '-
-          0)
-      (c-lineup-topmost-intro-cont langelem))))
+    (cond 
+     ((modern-c++-inside-class-enum-p pos)
+      (cond
+       ((modern-c++-class-enum-closing-brace-p pos) '-)
+       (t 0)))
+     (t (c-lineup-topmost-intro-cont langelem)))))
+
+(defun modern-c++-offset-statement (langelem)
+  (let ((pos (c-langelem-pos langelem)))
+    (cond
+     (t (message (buffer-substring pos (+ pos 10))) 0))))
 
 (defun modern-c++-offset-statement-cont (langelem)
-  (if (modern-c++-inside-class-enum-p (c-langelem-pos langelem))
-      '-
-    '+))
+  (let ((pos (c-langelem-pos langelem)))
+    (cond
+     ((modern-c++-inside-class-enum-p pos) '-)
+     ((modern-c++-argument-block-p pos) '-) ; FIXME: not working
+     ((modern-c++-argument-block-closed-p pos) '-)
+     (t (message (buffer-substring pos (+ pos 10))) '+))))
 
-(defun modern-c++-indentations ()
+(defun modern-c++-offset-statement-block-intro (langelem)
+  (let ((pos (c-langelem-pos langelem)))
+    (cond 
+     ((modern-c++-argument-lambda-p pos) 0)
+     ((modern-c++-argument-block-p pos) 0)
+     (t (message (buffer-substring pos (+ pos 10))) '+))))
+
+(defun modern-c++-offset-substatement-open (langelem)
+  (let ((pos (c-langelem-pos langelem)))
+    (cond
+     ((modern-c++-argument-block-closed-p pos) 0)
+     (t (message (buffer-substring pos (+ pos 10))) 0))))
+
+(defun modern-c++-offset-block-close (langelem)
+  (let ((pos (c-langelem-pos langelem)))
+    (cond
+     ((modern-c++-argument-lambda-p pos) '-)
+     ((modern-c++-argument-block-p pos) '-)
+     (t (message (buffer-substring pos (+ pos 10))) 0))))
+
+(defun modern-c++-setup-indentations ()
   "Deal with modern C++ identations"
   ;; +   `c-basic-offset' times 1
   ;; -   `c-basic-offset' times -1
@@ -334,7 +386,12 @@ http://en.cppreference.com/w/cpp/language/string_literal"
   ;; *   `c-basic-offset' times 0.5
   ;; /   `c-basic-offset' times -0.5
   (add-to-list 'c-offsets-alist '(topmost-intro-cont . modern-c++-offset-topmost-intro-cont))
-  (add-to-list 'c-offsets-alist '(statement-cont . modern-c++-offset-statement-cont)))
+  (add-to-list 'c-offsets-alist '(statement-block-intro . modern-c++-offset-statement-block-intro))
+  (add-to-list 'c-offsets-alist '(statement . modern-c++-offset-statement))
+  (add-to-list 'c-offsets-alist '(statement-cont . modern-c++-offset-statement-cont))
+  (add-to-list 'c-offsets-alist '(substatement-open . modern-c++-offset-substatement-open))
+  (add-to-list 'c-offsets-alist '(block-close . modern-c++-offset-block-close)) 
+  t)
 
 ;;;###autoload
 (define-minor-mode modern-c++-minor-mode
@@ -359,7 +416,7 @@ http://en.cppreference.com/w/cpp/language/string_literal"
       (with-no-warnings
         (font-lock-fontify-buffer))))
 
-  (modern-c++-indentations))
+  (modern-c++-setup-indentations))
 
 ;;;###autoload
 (define-global-minor-mode modern-c++-minor-mode-global-mode modern-c++-minor-mode

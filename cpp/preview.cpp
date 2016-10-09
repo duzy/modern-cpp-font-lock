@@ -45,3 +45,21 @@ namespace
     D,
   };
 }
+
+void fun() 
+{
+  std::generate_n(std::begin(i), 4, [] {
+    static int g;
+    {
+      (void) false;
+      
+    }
+    return g++;
+  });
+  
+  call(object{
+    { "...1" },
+    { "...2" },
+    { "...3" },
+  });
+}
