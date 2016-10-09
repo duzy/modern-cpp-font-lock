@@ -294,6 +294,48 @@ http://en.cppreference.com/w/cpp/language/string_literal"
   (when modern-c++-literal-string
     (font-lock-remove-keywords mode modern-c++-minor-mode-literal-string)))
 
+(defun modern-c++-inside-class-enum-p (pos)
+  "Checks if POS is within the braces of a C++ \"enum class\"."
+  (ignore-errors
+    (save-excursion
+      (goto-char pos)
+      (up-list -1) ; Move forward out of one level of parentheses.
+      (backward-sexp 1) ; Move backward across 1 balanced expression (sexp).
+      (or (looking-back "enum\\s-+class\\s-+")
+          (looking-back "enum\\s-+class\\s-+\\S-+\\s-*:\\s-*")))))
+
+(defun modern-c++-class-enum-closing-brace-p (pos)
+  "Checks if POS is within the braces of a C++ \"enum class\"."
+  (ignore-errors
+    (save-excursion
+      ;;(goto-char pos)
+      (move-beginning-of-line 1)
+      (or (looking-at "\\s-*}")))))
+
+(defun modern-c++-offset-topmost-intro-cont (langelem)
+  (let ((pos (c-langelem-pos langelem)))
+    (if (modern-c++-inside-class-enum-p pos)
+        (if (modern-c++-class-enum-closing-brace-p pos)
+            '-
+          0)
+      (c-lineup-topmost-intro-cont langelem))))
+
+(defun modern-c++-offset-statement-cont (langelem)
+  (if (modern-c++-inside-class-enum-p (c-langelem-pos langelem))
+      '-
+    '+))
+
+(defun modern-c++-indentations ()
+  "Deal with modern C++ identations"
+  ;; +   `c-basic-offset' times 1
+  ;; -   `c-basic-offset' times -1
+  ;; ++  `c-basic-offset' times 2
+  ;; --  `c-basic-offset' times -2
+  ;; *   `c-basic-offset' times 0.5
+  ;; /   `c-basic-offset' times -0.5
+  (add-to-list 'c-offsets-alist '(topmost-intro-cont . modern-c++-offset-topmost-intro-cont))
+  (add-to-list 'c-offsets-alist '(statement-cont . modern-c++-offset-statement-cont)))
+
 ;;;###autoload
 (define-minor-mode modern-c++-minor-mode
   "Provides font-locking as a Minor Mode for Modern C++"
@@ -303,13 +345,21 @@ http://en.cppreference.com/w/cpp/language/string_literal"
   (if modern-c++-minor-mode
       (modern-c++-minor-mode-add-keywords)
     (modern-c++-minor-mode-remove-keywords))
+
+  ;; (setq-default
+  ;;  c-basic-offset 4
+  ;;  tab-width 4
+  ;;  indent-tabs-mode t)
+
   ;; As of Emacs 24.4, `font-lock-fontify-buffer' is not legal to
   ;; call, instead `font-lock-flush' should be used.
   (if (fboundp 'font-lock-flush)
       (font-lock-flush)
     (when font-lock-mode
       (with-no-warnings
-        (font-lock-fontify-buffer)))))
+        (font-lock-fontify-buffer))))
+
+  (modern-c++-indentations))
 
 ;;;###autoload
 (define-global-minor-mode modern-c++-minor-mode-global-mode modern-c++-minor-mode

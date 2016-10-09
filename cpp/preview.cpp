@@ -22,3 +22,26 @@ struct A final : Foo {
 template <typename T> concept bool EqualityComparable = requires(T a, T b) {
   { a == b } -> bool;
 };
+
+namespace
+{
+  enum E0 {
+    A,
+    B,
+    C,
+  };
+  
+  enum class E1 {
+    A,
+    B,
+    C,
+    D,
+  };
+  
+  enum class E1 : int {
+    A,
+    B,
+    C,
+    D,
+  };
+}
