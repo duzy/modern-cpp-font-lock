@@ -60,3 +60,10 @@ auto c = u"😃 = \U0001F603 is :-D";
 auto c = U"😎 = \U0001F60E is B-)";
 auto c = R"xyz()")xyz";
 auto c = R"()")";
+
+auto heredoc = u8R"xyz(
+Multiline heardoc string.
+Multiline heardoc string.
+Multiline heardoc string.
+Multiline heardoc string.
+)xyz";

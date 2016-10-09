@@ -1,9 +1,9 @@
-;;; modern-cpp-font-lock.el --- Font-locking for "Modern C++"  -*- lexical-binding: t; -*-
+;;; modern-cpp-minor-mode.el --- Font-locking for "Modern C++"  -*- lexical-binding: t; -*-
 
 ;; Copyright © 2016, by Ludwig PACIFICI
 
-;; Author: Ludwig PACIFICI <ludwig@lud.cc>
-;; URL: https://github.com/ludwigpacifici/modern-cpp-font-lock
+;; Authors: Ludwig PACIFICI <ludwig@lud.cc>, Duzy Chan <code@duzy.info>
+;; URL: https://github.com/ludwigpacifici/modern-cpp-minor-mode
 ;; Version: 0.1.3
 ;; Created: 12 May 2016
 ;; Keywords: languages, c++, cpp, font-lock
@@ -20,18 +20,18 @@
 ;; mode for extra highlighting (user defined types, functions, etc.)
 ;; and indentation.
 
-;; Melpa: [M-x] package-install [RET] modern-cpp-font-lock [RET]
+;; Melpa: [M-x] package-install [RET] modern-cpp-minor-mode [RET]
 ;; In your init Emacs file add:
-;;     (add-hook 'c++-mode-hook #'modern-c++-font-lock-mode)
+;;     (add-hook 'c++-mode-hook #'modern-c++-minor-mode)
 ;; or:
-;;     (modern-c++-font-lock-global-mode t)
+;;     (modern-c++-minor-mode-global-mode t)
 
 ;; For the current buffer, the minor-mode can be turned on/off via the
 ;; command:
-;;     [M-x] modern-c++-font-lock-mode [RET]
+;;     [M-x] modern-c++-minor-mode [RET]
 
 ;; More documentation:
-;; https://github.com/ludwigpacifici/modern-cpp-font-lock/blob/master/README.md
+;; https://github.com/ludwigpacifici/modern-cpp-minor-mode/blob/master/README.md
 
 ;; Feedback is welcome!
 
@@ -54,13 +54,22 @@
 
 ;;; Code:
 
-(defgroup modern-c++-font-lock nil
+(defgroup modern-c++-minor-mode nil
   "Provides font-locking as a Minor Mode for Modern C++"
   :group 'faces)
 
 (eval-and-compile
   (defun modern-c++-string-lenght< (a b) (< (length a) (length b)))
   (defun modern-c++-string-lenght> (a b) (not (modern-c++-string-lenght< a b))))
+
+(defcustom modern-c++-comment-todos
+  (eval-when-compile
+    (sort '("TODO" "FIXME")
+          'modern-c++-string-lenght>))
+  "TODO, FIXME in comments"
+  :type '(choice (const :tag "Disabled" nil)
+                 (repeat string))
+  :group 'modern-c++-minor-mode)
 
 (defcustom modern-c++-types
   (eval-when-compile
@@ -70,7 +79,7 @@
 http://en.cppreference.com/w/cpp/language/types"
   :type '(choice (const :tag "Disabled" nil)
                  (repeat string))
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
 (defcustom modern-c++-preprocessors
   (eval-when-compile
@@ -81,7 +90,7 @@ http://en.cppreference.com/w/cpp/keyword and
 http://en.cppreference.com/w/cpp/preprocessor"
   :type '(choice (const :tag "Disabled" nil)
                  (repeat string))
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
 (defcustom modern-c++-keywords
   (eval-when-compile
@@ -91,7 +100,7 @@ http://en.cppreference.com/w/cpp/preprocessor"
 http://en.cppreference.com/w/cpp/keyword"
   :type '(choice (const :tag "Disabled" nil)
                  (repeat string))
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
 (defcustom modern-c++-attributes
   (eval-when-compile
@@ -101,7 +110,7 @@ http://en.cppreference.com/w/cpp/keyword"
 http://en.cppreference.com/w/cpp/language/attributes"
   :type '(choice (const :tag "Disabled" nil)
                  (repeat string))
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
 (defcustom modern-c++-operators
   (eval-when-compile
@@ -114,9 +123,19 @@ information, see doc:
 http://en.cppreference.com/w/cpp/language/operators"
   :type '(choice (const :tag "Disabled" nil)
                  (repeat string))
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
-(defvar modern-c++-font-lock-keywords nil)
+(defvar modern-c++-minor-mode-keywords nil)
+
+
+(defun modern-c++-generate-font-lock-comment-todos ()
+  (let ((todos-regexp 
+         (concat "\\[\\[\\(" (regexp-opt modern-c++-comment-todos 'words) "\\):"))
+        )
+    (setq modern-c++-minor-mode-comment-todos
+          `(;; Uses warning-face
+            (,todos-regexp (0 font-lock-warning-face))
+            ))))
 
 (defun modern-c++-generate-font-lock-keywords ()
   (let ((types-regexp (regexp-opt modern-c++-types 'words))
@@ -125,7 +144,7 @@ http://en.cppreference.com/w/cpp/language/operators"
         (attributes-regexp
          (concat "\\[\\[\\(" (regexp-opt modern-c++-attributes 'words) "\\).*\\]\\]"))
         (operators-regexp (regexp-opt modern-c++-operators)))
-    (setq modern-c++-font-lock-keywords
+    (setq modern-c++-minor-mode-keywords
           `(
             ;; Note: order below matters, because once colored, that part
             ;; won't change. In general, longer words first
@@ -141,15 +160,15 @@ http://en.cppreference.com/w/cpp/language/operators"
 see documentation:
 http://en.cppreference.com/w/cpp/language/bool_literal"
   :type 'boolean
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
-(defvar modern-c++-font-lock-literal-boolean nil)
+(defvar modern-c++-minor-mode-literal-boolean nil)
 
 (defun modern-c++-generate-font-lock-literal-boolean ()
   (let ((literal-boolean-regexp (regexp-opt
                                  (eval-when-compile (sort '("false" "true") 'modern-c++-string-lenght>))
                                  'words)))
-    (setq modern-c++-font-lock-literal-boolean
+    (setq modern-c++-minor-mode-literal-boolean
           `(
             ;; Note: order below matters, because once colored, that part
             ;; won't change. In general, longer words first
@@ -161,9 +180,9 @@ http://en.cppreference.com/w/cpp/language/bool_literal"
 see documentation:
 http://en.cppreference.com/w/cpp/language/integer_literal"
   :type 'boolean
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
-(defvar modern-c++-font-lock-literal-integer nil)
+(defvar modern-c++-minor-mode-literal-integer nil)
 
 (defun modern-c++-generate-font-lock-literal-integer ()
   (eval-when-compile
@@ -173,7 +192,7 @@ http://en.cppreference.com/w/cpp/language/integer_literal"
            (literal-octal-regexp (concat not-alpha-numeric-regexp "\\(0\\)\\([0-7']+\\)\\(" integer-suffix-regexp "?\\)"))
            (literal-hex-regexp (concat not-alpha-numeric-regexp "\\(0[xX]\\)\\([0-9a-fA-F']+\\)\\(" integer-suffix-regexp "?\\)"))
            (literal-dec-regexp (concat not-alpha-numeric-regexp "\\([1-9][0-9']*\\)\\(" integer-suffix-regexp "\\)")))
-      (setq modern-c++-font-lock-literal-integer
+      (setq modern-c++-minor-mode-literal-integer
             `(
               ;; Note: order below matters, because once colored, that part
               ;; won't change. In general, longer words first
@@ -195,15 +214,15 @@ http://en.cppreference.com/w/cpp/language/integer_literal"
 see documentation:
 http://en.cppreference.com/w/cpp/language/nullptr"
   :type 'boolean
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
-(defvar modern-c++-font-lock-literal-null-pointer nil)
+(defvar modern-c++-minor-mode-literal-null-pointer nil)
 
 (defun modern-c++-generate-font-lock-literal-null-pointer ()
   (let ((literal-null-pointer-regexp (regexp-opt
                                       (eval-when-compile (sort '("nullptr") 'modern-c++-string-lenght>))
                                       'words)))
-    (setq modern-c++-font-lock-literal-null-pointer
+    (setq modern-c++-minor-mode-literal-null-pointer
           `(
             ;; Note: order below matters, because once colored, that part
             ;; won't change. In general, longer words first
@@ -215,9 +234,9 @@ http://en.cppreference.com/w/cpp/language/nullptr"
 see documentation:
 http://en.cppreference.com/w/cpp/language/string_literal"
   :type 'boolean
-  :group 'modern-c++-font-lock)
+  :group 'modern-c++-minor-mode)
 
-(defvar modern-c++-font-lock-literal-string nil)
+(defvar modern-c++-minor-mode-literal-string nil)
 
 (defun modern-c++-generate-font-lock-literal-string ()
   (eval-when-compile
@@ -237,7 +256,7 @@ http://en.cppreference.com/w/cpp/language/string_literal"
             (concat "\\(" prefix-regexp "?" raw "\"(\\)"
                     "\\(\\(.\\|\n\\)*?\\)"
                     "\\()\"s?\\)")))
-      (setq modern-c++-font-lock-literal-string
+      (setq modern-c++-minor-mode-literal-string
             `(
               ;; Note: order below matters, because once colored, that part
               ;; won't change. In general, longer words first
@@ -251,8 +270,9 @@ http://en.cppreference.com/w/cpp/language/string_literal"
                                       (2 font-lock-string-face)
                                       (3 font-lock-constant-face)))))))
 
-(defun modern-c++-font-lock-add-keywords (&optional mode)
+(defun modern-c++-minor-mode-add-keywords (&optional mode)
   "Install keywords into major MODE, or into current buffer if nil."
+  (font-lock-add-keywords mode (modern-c++-generate-font-lock-comment-todos) nil)
   (font-lock-add-keywords mode (modern-c++-generate-font-lock-keywords) nil)
   (when modern-c++-literal-boolean
     (font-lock-add-keywords mode (modern-c++-generate-font-lock-literal-boolean) nil))
@@ -263,27 +283,28 @@ http://en.cppreference.com/w/cpp/language/string_literal"
   (when modern-c++-literal-string
     (font-lock-add-keywords mode (modern-c++-generate-font-lock-literal-string) nil)))
 
-(defun modern-c++-font-lock-remove-keywords (&optional mode)
+(defun modern-c++-minor-mode-remove-keywords (&optional mode)
   "Remove keywords from major MODE, or from current buffer if nil."
-  (font-lock-remove-keywords mode modern-c++-font-lock-keywords)
+  (font-lock-remove-keywords mode modern-c++-minor-mode-comment-todos)
+  (font-lock-remove-keywords mode modern-c++-minor-mode-keywords)
   (when modern-c++-literal-boolean
-    (font-lock-remove-keywords mode modern-c++-font-lock-literal-boolean))
+    (font-lock-remove-keywords mode modern-c++-minor-mode-literal-boolean))
   (when modern-c++-literal-integer
-    (font-lock-remove-keywords mode modern-c++-font-lock-literal-integer))
+    (font-lock-remove-keywords mode modern-c++-minor-mode-literal-integer))
   (when modern-c++-literal-null-pointer
-    (font-lock-remove-keywords mode modern-c++-font-lock-literal-null-pointer))
+    (font-lock-remove-keywords mode modern-c++-minor-mode-literal-null-pointer))
   (when modern-c++-literal-string
-    (font-lock-remove-keywords mode modern-c++-font-lock-literal-string)))
+    (font-lock-remove-keywords mode modern-c++-minor-mode-literal-string)))
 
 ;;;###autoload
-(define-minor-mode modern-c++-font-lock-mode
+(define-minor-mode modern-c++-minor-mode
   "Provides font-locking as a Minor Mode for Modern C++"
   :init-value nil
   :lighter " mc++fl"
-  :group 'modern-c++-font-lock
-  (if modern-c++-font-lock-mode
-      (modern-c++-font-lock-add-keywords)
-    (modern-c++-font-lock-remove-keywords))
+  :group 'modern-c++-minor-mode
+  (if modern-c++-minor-mode
+      (modern-c++-minor-mode-add-keywords)
+    (modern-c++-minor-mode-remove-keywords))
   ;; As of Emacs 24.4, `font-lock-fontify-buffer' is not legal to
   ;; call, instead `font-lock-flush' should be used.
   (if (fboundp 'font-lock-flush)
@@ -293,14 +314,14 @@ http://en.cppreference.com/w/cpp/language/string_literal"
         (font-lock-fontify-buffer)))))
 
 ;;;###autoload
-(define-global-minor-mode modern-c++-font-lock-global-mode modern-c++-font-lock-mode
+(define-global-minor-mode modern-c++-minor-mode-global-mode modern-c++-minor-mode
   (lambda ()
     (when (apply 'derived-mode-p '(c++-mode))
-      (modern-c++-font-lock-mode 1)))
-  :group 'modern-c++-font-lock)
+      (modern-c++-minor-mode 1)))
+  :group 'modern-c++-minor-mode)
 
-(provide 'modern-cpp-font-lock)
+(provide 'modern-cpp-minor-mode)
 
 ;; coding: utf-8
 
-;;; modern-cpp-font-lock.el ends here
+;;; modern-cpp-minor-mode.el ends here

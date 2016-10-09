@@ -19,7 +19,7 @@
 
 (faceup-defexplainer facit-tests)
 
-(ert-deftest modern-cpp-font-lock-file-test ()
+(ert-deftest modern-cpp-minor-mode-file-test ()
   (facit-tests project-directory test-directory cpp-filename))
 
-(provide 'modern-cpp-font-lock-test)
+(provide 'modern-cpp-minor-mode-test)
