@@ -127,14 +127,13 @@ http://en.cppreference.com/w/cpp/language/operators"
 
 (defvar modern-c++-minor-mode-keywords nil)
 
-
 (defun modern-c++-generate-font-lock-comment-todos ()
-  (let ((todos-regexp 
-         (concat "\\[\\[\\(" (regexp-opt modern-c++-comment-todos 'words) "\\):"))
-        )
+  (let ((todos-regexp (concat (regexp-opt modern-c++-comment-todos 'words) ":")))
+    (message todos-regexp)
     (setq modern-c++-minor-mode-comment-todos
-          `(;; Uses warning-face
-            (,todos-regexp (0 font-lock-warning-face))
+          `(
+            ;; Uses warning-face (use prepend to highlight todos in comments)
+            (,todos-regexp (1 font-lock-warning-face prepend))
             ))))
 
 (defun modern-c++-generate-font-lock-keywords ()
@@ -300,7 +299,7 @@ http://en.cppreference.com/w/cpp/language/string_literal"
 (define-minor-mode modern-c++-minor-mode
   "Provides font-locking as a Minor Mode for Modern C++"
   :init-value nil
-  :lighter " mc++fl"
+  :lighter " mc++"
   :group 'modern-c++-minor-mode
   (if modern-c++-minor-mode
       (modern-c++-minor-mode-add-keywords)
