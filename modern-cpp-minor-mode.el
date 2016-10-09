@@ -129,7 +129,6 @@ http://en.cppreference.com/w/cpp/language/operators"
 
 (defun modern-c++-generate-font-lock-comment-todos ()
   (let ((todos-regexp (concat (regexp-opt modern-c++-comment-todos 'words) ":")))
-    (message todos-regexp)
     (setq modern-c++-minor-mode-comment-todos
           `(
             ;; Uses warning-face (use prepend to highlight todos in comments)
