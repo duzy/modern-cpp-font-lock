@@ -52,10 +52,13 @@ void fun()
     static int g;
     {
       (void) false;
-      
     }
     return g++;
   });
+
+  if (!blah(1, 2, 3, 4)) {
+    return;
+  }
   
   call(object{
     { "...1" },

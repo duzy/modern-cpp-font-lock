@@ -316,16 +316,18 @@ http://en.cppreference.com/w/cpp/language/string_literal"
   (ignore-errors
     (save-excursion
       (goto-char pos)
-      (or (looking-at ".*[(,][^)]*[({][^}]*$")
-          nil))))
+      (if (not (looking-at (regexp-opt (list "if" "while" "for") 'words)))
+          (or (looking-at ".*[(,][^)]*[({][^}]*$")
+              nil)))))
 
 (defun modern-c++-argument-block-closed-p (pos)
   "Checks if POS is at a block as argument."
   (ignore-errors
     (save-excursion
       (goto-char pos)
-      (or (looking-at ".*[({].*[})]\\s-*,$")
-          nil))))
+      (if (not (looking-at (regexp-opt (list "if" "while" "for") 'words)))
+          (or (looking-at ".*[({].*[})]\\s-*,$")
+              nil)))))
 
 (defun modern-c++-class-enum-closing-brace-p (pos)
   "Checks if POS is within the braces of a C++ \"enum class\"."
@@ -353,28 +355,42 @@ http://en.cppreference.com/w/cpp/language/string_literal"
   (let ((pos (c-langelem-pos langelem)))
     (cond
      ((modern-c++-inside-class-enum-p pos) '-)
-     ((modern-c++-argument-block-p pos) '-) ; FIXME: not working
-     ((modern-c++-argument-block-closed-p pos) '-)
+     ((modern-c++-argument-block-p pos) 
+      (message (concat "argument-block: " (buffer-substring pos (+ pos 10))))
+      '-)
+     ((modern-c++-argument-block-closed-p pos) 
+      (message (concat "argument-block-closed: " (buffer-substring pos (+ pos 10))))
+      '-)
      (t (message (buffer-substring pos (+ pos 10))) '+))))
 
 (defun modern-c++-offset-statement-block-intro (langelem)
   (let ((pos (c-langelem-pos langelem)))
     (cond 
-     ((modern-c++-argument-lambda-p pos) 0)
-     ((modern-c++-argument-block-p pos) 0)
+     ((modern-c++-argument-lambda-p pos) 
+      (message (concat "argument-lambda: " (buffer-substring pos (+ pos 10))))
+      0)
+     ((modern-c++-argument-block-p pos) 
+      (message (concat "argument-block: " (buffer-substring pos (+ pos 10))))
+      0)
      (t (message (buffer-substring pos (+ pos 10))) '+))))
 
 (defun modern-c++-offset-substatement-open (langelem)
   (let ((pos (c-langelem-pos langelem)))
     (cond
-     ((modern-c++-argument-block-closed-p pos) 0)
+     ((modern-c++-argument-block-closed-p pos) 
+      (message (concat "argument-block-closed: " (buffer-substring pos (+ pos 10))))
+      0)
      (t (message (buffer-substring pos (+ pos 10))) 0))))
 
 (defun modern-c++-offset-block-close (langelem)
   (let ((pos (c-langelem-pos langelem)))
     (cond
-     ((modern-c++-argument-lambda-p pos) '-)
-     ((modern-c++-argument-block-p pos) '-)
+     ((modern-c++-argument-lambda-p pos) 
+      (message (concat "argument-lambda: " (buffer-substring pos (+ pos 10))))
+      '-)
+     ((modern-c++-argument-block-p pos) 
+      (message (concat "argument-block: " (buffer-substring pos (+ pos 10))))
+      '-)
      (t (message (buffer-substring pos (+ pos 10))) 0))))
 
 (defun modern-c++-setup-indentations ()
